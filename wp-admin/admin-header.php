@@ -167,6 +167,134 @@ $admin_body_class .= ' no-customize-support';
 	document.body.className = document.body.className.replace('no-js','js');
 </script>
 
+<script type="text/javascript">
+	function category_alert(action, categories, w, h)
+	{
+		var titleheight = "20px";
+		var bordercolor = "#464646";
+		var titlecolor = "#FFFFFF";
+		var titlebgcolor = "#464646";
+		var bgcolor = "#F9F9F9";
+
+		var iwidth = document.documentElement.clientWidth;
+		var iheight = document.getElementById("wpwrap").scrollHeight;
+
+		var bgObj = document.createElement("div");
+		bgObj.setAttribute("id", "category_alert_background");
+		bgObj.style.cssText = "position:absolute; left:0px; top:0px; width:" + iwidth + "px; height:" + Math.max(document.body.clientHeight, iheight) + "px; filter:Alpha(Opacity=50); opacity:0.5; background-color:#24140C; z-index:100;";
+		document.getElementById("wpwrap").appendChild(bgObj);
+
+		var msgObj = document.createElement("div");
+		msgObj.setAttribute("id", "category_alert");
+		msgObj.style.cssText = "position:absolute;font:11px; top:200px;left:" + (iwidth - w) / 2 + "px;width:" + w + "px; height:" + h + "px;text-align:center;border:1px solid" + bordercolor + "; background-color:" + bgcolor + "; padding:1px; line-height:23px; z-index:101;";
+
+		var table = document.createElement("table");
+		msgObj.appendChild(table);
+		table.style.cssText = "margin:0px;border:0px;padding:0px;";
+		table.cellSpacing = 0;
+		var tr = table.insertRow(-1);
+		var titleBar = tr.insertCell(-1);
+		titleBar.style.cssText = "width:" + w + "px; height:" + titleheight + "px; text-align:center; padding:1px; margin:0px; font:bold 12px sans-serif; color:" + titlecolor + "; cursor:move; background-color:" + titlebgcolor;
+		titleBar.innerHTML = "&nbsp; Did NOT select any category";
+
+		var moveX = 0;
+		var moveY = 0;
+		var moveTop = 0;
+		var moveLeft = 0;
+		var moveable = false;
+		var docMouseMoveEvent = document.onmousemove;
+		var docMouseUpEvent = document.onmouseup;
+		titleBar.onmousedown = function() 
+		{   
+			function getEvent()
+			{
+				return window.event || arguments.callee.caller.arguments[0];
+			}
+
+			var my_evt = getEvent();
+			moveable = true;
+			moveX = my_evt.clientX;
+			moveY = my_evt.clientY;
+			moveTop = parseInt(msgObj.style.top);
+			moveLeft = parseInt(msgObj.style.left);
+
+			document.onmousemove = function() 
+			{   
+				if (moveable) 
+				{   
+					var my_evt = getEvent();
+					var x = moveLeft + my_evt.clientX - moveX;
+					var y = moveTop + my_evt.clientY - moveY;
+					if ( x > 0 &&( x + w < iwidth) && y > 0 && (y + h < iheight) )
+					{   
+						msgObj.style.left = x + "px";
+						msgObj.style.top = y + "px";
+					}   
+				}   
+			};
+
+			document.onmouseup = function ()  
+			{   
+				if (moveable) 
+				{   
+					document.onmousemove = docMouseMoveEvent;
+					document.onmouseup = docMouseUpEvent;
+					moveable = false;
+					moveX=0;
+					moveY=0;
+					moveTop=0;
+					moveLeft=0;
+				}
+			};
+		}
+
+		var closeBtn=tr.insertCell(-1);
+		closeBtn.style.cssText="cursor:pointer; padding:1px; background-color:" + titlebgcolor;
+		closeBtn.innerHTML="<span style='margin-right:3px; font-size:13pt; color:" + titlecolor + ";'>x";
+		closeBtn.onclick = function()
+		{
+			document.getElementById("wpwrap").removeChild(bgObj);
+			document.getElementById("wpwrap").removeChild(msgObj);
+		}
+
+		var msgBox = table.insertRow(-1).insertCell(-1);
+		msgBox.style.cssText = "font:narmol 17px sans-serif; color:black;";
+		msgBox.colSpan = 2;
+		link = window.location.href
+		caption_style = "width:100%; height:30px; float:left; text-align:left; text-indent:10px; color:black; font-size:13px";
+		form_style = "text-align:left; margin-left:9px; float:left; width:70%;";
+		botton_style = "float:left;";
+
+		var html_string = "<form action='" + link + "' method = 'post'><br/><div style=' "+ caption_style + "'>Create a New Category?</div> <div style='float:left;width:100%;'><div style='" + form_style + "'><input id='new_cate_input' type='text' style='width:100%' name='new_category_name' /></div><div style='" + botton_style + "'>&nbsp; <input type='submit' class='button button-primary' name='new_cate_submit' value='create'></div></div>";
+
+		switch (action) {
+		case "new":
+			var cates = categories.replace(/^\s+|\s+$/g,'').split(/\s+/);
+			var checkboxes = "<div style='float:left; text-align:left; width:100%; margin-top:16px; margin-left:9px;'><font size='4'>OR</font> select from waht you have:</div><div style='text-align:left; margin-left:12px;'>";
+			for (i in cates)
+				checkboxes += "<input type='checkbox' name='" + cates[i] + "'> " + cates[i] + "&nbsp;&nbsp; ";
+			checkboxes += "</div><input type='submit' class='button button-primary' name='select_cate_submit' value='submit'>";
+
+			msgBox.innerHTML = html_string + checkboxes + "</form>";
+			document.getElementById("wpwrap").appendChild(msgObj);
+			document.getElementById("new_cate_input").focus();
+			break;
+
+		case "choose":
+			var cates = categories.replace(/^\s+|\s+$/g,'').split(/\s+/);
+			var checkboxes = "<div style='float:left; text-align:left; width:100%; margin-top:16px; margin-left:9px;'><font size='4'>OR</font> select what we guess for you:</div><div style='text-align:left; margin-left:12px;'>";
+			for (i in cates)
+				checkboxes += "<input type='checkbox' name='" + cates[i] + "'> " + cates[i] + "&nbsp;&nbsp; ";
+			checkboxes += "</div><input type='submit' class='button button-primary' name='select_cate_submit' value='submit'>";
+
+			msgBox.innerHTML = html_string + checkboxes + "</form>";
+			document.getElementById("wpwrap").appendChild(msgObj);
+			document.getElementById("new_cate_input").focus();
+			break;
+		}
+	}
+</script>
+
 <?php
 // Make sure the customize body classes are correct as early as possible.
 if ( current_user_can( 'edit_theme_options' ) )

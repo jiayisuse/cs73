@@ -23,6 +23,35 @@ elseif ( isset( $_POST['post_ID'] ) )
 else
  	$post_id = $post_ID = 0;
 
+if ( isset( $_POST['new_cate_submit'] ) ) {
+	$new_cate_name = $_POST['new_category_name'];
+	unset( $_GET['from'] );
+
+	if ($new_cate_name != "") {
+		$new_cate_id = wp_create_category($new_cate_name);
+		if ($new_cate_id == 0)
+			echo "<script type='text/javascript'>alert('create catetory \"". $new_cate_name ."\" failed');</script>";
+		else {
+			wp_set_post_categories( $post_id, $new_cate_id);
+			$python_post = get_post($post_id);
+			shell_exec('./data_update.py ' . escapeshellarg($python_post->post_title) . " " . escapeshellarg($python_post->post_content) . " " . escapeshellarg((string)$new_cate_id));
+		}
+	}
+}
+
+if ( isset( $_POST['select_cate_submit'] ) ) {
+	$cate_ids = array();
+	$categories = get_categories();
+	foreach ($categories as $cate)
+		if ( isset( $_POST[(string)$cate->name] ) )
+			array_push($cate_ids, $cate->term_id);
+
+	wp_set_post_categories($post_id, $cate_ids);
+	$python_post = get_post($post_id);
+	foreach ($cate_ids as $cate_id)
+		shell_exec('./data_update.py ' . escapeshellarg($python_post->post_title) . " " . escapeshellarg($python_post->post_content) . " " . escapeshellarg((string)$cate_id));
+}
+
 $post = $post_type = $post_type_object = null;
 
 if ( $post_id )
@@ -38,7 +67,7 @@ if ( $post ) {
  *
  * @param int $post_id Optional. Post ID.
  */
-function redirect_post($post_id = '') {
+function redirect_post($post_id = '', $edited = false) {
 	if ( isset($_POST['save']) || isset($_POST['publish']) ) {
 		$status = get_post_status( $post_id );
 
@@ -71,6 +100,9 @@ function redirect_post($post_id = '') {
 	} else {
 		$location = add_query_arg( 'message', 4, get_edit_post_link( $post_id, 'url' ) );
 	}
+
+	if ($edited)
+		$location = $location . "&from=edit";
 
 	wp_redirect( apply_filters( 'redirect_post_location', $location, $post_id ) );
 	exit;
@@ -121,7 +153,7 @@ case 'post-quickpress-save':
 		exit;
 	}
 
-	redirect_post($post_id);
+	redirect_post($post_id, true);
 	exit();
 	break;
 
@@ -197,6 +229,32 @@ case 'edit':
 
 	include( ABSPATH . 'wp-admin/edit-form-advanced.php' );
 
+	if (isset($_GET['from'])) {
+		$categories = get_the_category($post->ID);
+		if (!$categories || (sizeof($categories) == 1 && $categories[0]->term_id == 1)) {
+			$python_result = shell_exec('python ./bigrams_perplexity.py ' . escapeshellarg(json_encode($post->post_title)));
+			$cates = "";
+			$result_data = json_decode($python_result, true);
+			if ($result_data[0] == 0) {
+				$python_result = shell_exec('python ./bigrams_perplexity.py ' . escapeshellarg(json_encode($post->post_content)));
+				$result_data = json_decode($python_result, true);
+				if ($result_data[0] == 0) {
+					foreach (array_slice($result_data, 1) as $cate_id)
+						$cates = $cates . " " . get_the_category_by_ID($cate_id);
+					echo "<script type='text/javascript'>category_alert('new', '". $cates ."', 300, 200);</script>";
+				} else {
+					foreach ($result_data as $cate_id)
+						$cates = $cates . " " . get_the_category_by_ID($cate_id);
+					echo "<script type='text/javascript'>category_alert('choose', '". $cates ."', 300, 200);</script>";
+				}
+			} else {
+				foreach ($result_data as $cate_id)
+					$cates = $cates . " " . get_the_category_by_ID($cate_id);
+				echo "<script type='text/javascript'>category_alert('choose', '". $cates ."', 300, 210);</script>";
+			}
+		}
+	}
+
 	break;
 
 case 'editattachment':
@@ -221,7 +279,7 @@ case 'editpost':
 	if ( isset( $_COOKIE['wp-saving-post-' . $post_id] ) )
 		setcookie( 'wp-saving-post-' . $post_id, 'saved' );
 
-	redirect_post($post_id); // Send user on their way while we keep working
+	redirect_post($post_id, true); // Send user on their way while we keep working
 
 	exit();
 	break;
