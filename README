@@ -1,0 +1,14 @@
+cs73
+====
+
+Category Recommendation for Blog Posting
+
+1. You should set up the LAMP (Linux, Apache, MySQL and PHP) and python environment
+   to run it.
+
+2. Python scripts depend on NLTK package.
+
+3. You could try it on http://jiayi.net/linguistics/wordpress/wp-admin. The user name
+      and the password have been included in the email
+
+4. The dataset and model files would go to ./wp-admin/data/
